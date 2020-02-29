@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from urllib.parse import urlencode, parse_qsl
+from urllib import urlencode
+from urlparse import parse_qsl
 import ast
 
 import xbmc
@@ -307,6 +308,8 @@ def list_files(url, category, s):
 
         items = soup_tv.find_all(class_="dlbox")
         for item in items:
+            if "دوبله" in str(item):
+                continue
             season = "Season " + re.search("فصل: <span>(.+?)</span>", str(item.find(class_="dldetails"))).group(1)
             tv_download_page_dict[season] = []
             content_items = item.find(class_="tvserieslinks").find_all("li", attrs={"style": "position: relative"})
