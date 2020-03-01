@@ -5,6 +5,7 @@
 */config.py
 venv/*
 plugin.video.daymovie.zip
+*.json
 
 ### JupyterNotebooks ###
 # gitignore template for Jupyter Notebooks
