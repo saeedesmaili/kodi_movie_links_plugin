@@ -24,14 +24,16 @@ _handle = int(sys.argv[1])
 i = 0
 
 
-def get_from_tvtime():
+def get_from_tvtime(s):
     try:
         with open('tvshows.json', "r") as json_file:
-            data = json.load(json_file)
+            json_items = json.load(json_file)
     except Exception as e:
+        json_items = []
         print(e)
         pass
 
+    tvtime_show_id_list = [item["tvtime_show_id"] for item in json_items]
     url = "https://www.tvtime.com/en/to-watch"
 
     payload = {}
@@ -45,11 +47,11 @@ def get_from_tvtime():
     'TE': 'Trailers'
     }
 
-    response = requests.request("GET", url, headers=headers, data = payload)
+    response = requests.request("GET", url, headers=headers, data=payload)
     soup = BeautifulSoup(response.text, 'html.parser')
 
     items = soup.find_all("li", id = re.compile("^episode-item"))
-    json_items = []
+    dummy_json = []
     for item in items:
         title = item.find("a", class_="nb-reviews-link").text
         episode_to_watch = item.find("div", class_="episode-details").h2.a.text
@@ -57,17 +59,39 @@ def get_from_tvtime():
         image = item.find("img")["src"]
         href = item.find("div", class_="image-crop").a["href"]
         tvtime_show_id = re.search("/en/show/(\d+)", href).group(1)
-        json_items.append({
+        json_item = {
             "title": title,
             "episode_to_watch": episode_to_watch,
             "remaining_episodes": remaining_episodes,
             "image": image,
             "tvtime_show_id": tvtime_show_id,
-            "1daymovie_id": None,
-            "1daymovie_show_url": None,
-            "1daymovie_season_url": None,
-        })
-
+            "daymovie_id": None,
+            "daymovie_show_url": None,
+            "daymovie_season_url": None,
+        }
+        if tvtime_show_id not in tvtime_show_id_list:
+            json_items.append(json_item)
+        else:
+            dummy_json.append(json_item)
+            
+    # update with searching in daymovie
+    for item in json_items:
+        # update the show url by searchin in daymovie
+        if item["daymovie_show_url"] is None:
+            to_search = item["title"].split("(")[0].strip()
+            daymovie_show_url = search_results(to_search, s)["TV Shows"][0]["href"]
+            item.update(("daymovie_show_url", daymovie_show_url) for key, value in item.items() if value == item["tvtime_show_id"])
+            
+        # update current and remaining episode based on crawled data from tvtime
+        if item["tvtime_show_id"] in [item["tvtime_show_id"] for item in dummy_json]:
+            for dummy_item in dummy_json:
+                if item["tvtime_show_id"] == dummy_item["tvtime_show_id"]:
+                    item.update(("episode_to_watch", dummy_item["episode_to_watch"]) for key, value in item.items() if value == item["tvtime_show_id"])
+                    item.update(("remaining_episodes", dummy_item["remaining_episodes"]) for key, value in item.items() if value == item["tvtime_show_id"])
+                    
+    with open('tvshows.json', "w") as json_file:
+        json.dump(json_items, json_file)
+            
     return json_items
 
 
@@ -120,7 +144,7 @@ def search_new_item(s):
     url = get_url(action='new_search')
     xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
 
-    json_items = get_from_tvtime()
+    json_items = get_from_tvtime(s)
     for item in json_items:
         xbmc.log("--listing items from tvtime",level=xbmc.LOGNOTICE)
         list_item = xbmcgui.ListItem(label=item["title"])
