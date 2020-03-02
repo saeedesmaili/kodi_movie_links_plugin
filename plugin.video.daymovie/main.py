@@ -96,8 +96,6 @@ def get_from_tvtime(s):
             dummy_json.append(json_item)            
             
     # update with searching in daymovie
-    xbmc.log("--10" + str(json_items),level=xbmc.LOGNOTICE)
-    xbmc.log("--20" + str(dummy_json),level=xbmc.LOGNOTICE)
     for item in json_items:
         # update the show url by searchin in daymovie
         if item["daymovie_show_url"] is None:
@@ -139,13 +137,9 @@ def get_from_tvtime(s):
                     
             
         # update current and remaining episode based on crawled data from tvtime
-        xbmc.log("--30" + str(item),level=xbmc.LOGNOTICE)
         if item["tvtime_show_id"] in [d_item["tvtime_show_id"] for d_item in dummy_json]:
-            xbmc.log("--1" + str(item),level=xbmc.LOGNOTICE)
             for dummy_item in dummy_json:
-                xbmc.log("--2" + str(dummy_item),level=xbmc.LOGNOTICE)
                 if item["tvtime_show_id"] == dummy_item["tvtime_show_id"]:
-                    xbmc.log("--3" + str(dummy_item),level=xbmc.LOGNOTICE)
                     item.update(("episode_to_watch", dummy_item["episode_to_watch"]) for key, value in item.items() if value == item["tvtime_show_id"])
                     item.update(("remaining_episodes", dummy_item["remaining_episodes"]) for key, value in item.items() if value == item["tvtime_show_id"])
 
@@ -268,7 +262,7 @@ def login():
         'cache-control': "no-cache"
     })
     response = s.post(url, data=payload, params=querystring)
-    return s
+    return response
 
 
 # TODO: display a "new search" option in first screen and open input box, when clicking on this option
@@ -647,6 +641,8 @@ def router(paramstring, s):
 if __name__ == '__main__':
     # Call the router function and pass the plugin call parameters to it.
     # We use string slicing to trim the leading '?' from the plugin call paramstring
+    xbmc.log("--main!",level=xbmc.LOGNOTICE)
+    xbmc.log(str(i),level=xbmc.LOGNOTICE)
     if i == 0:
         try:
             s = login()
