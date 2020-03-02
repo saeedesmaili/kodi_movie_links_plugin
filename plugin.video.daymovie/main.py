@@ -5,6 +5,7 @@ import os
 from urllib import urlencode
 from urlparse import parse_qsl
 import ast
+import time
 
 import xbmc
 import xbmcgui
@@ -71,7 +72,10 @@ def get_from_tvtime(s):
     for item in items:
         title = item.find("a", class_="nb-reviews-link").text
         episode_to_watch = item.find("div", class_="episode-details").h2.a.text
-        remaining_episodes = item.find("div", class_="episode-details").h2.span.text
+        try:
+            remaining_episodes = item.find("div", class_="episode-details").h2.span.text
+        except:
+            remaining_episodes = None
         image = item.find("img")["src"]
         href = item.find("div", class_="image-crop").a["href"]
         tvtime_show_id = re.search("/en/show/(\d+)", href).group(1)
@@ -92,6 +96,8 @@ def get_from_tvtime(s):
             dummy_json.append(json_item)            
             
     # update with searching in daymovie
+    xbmc.log("--10" + str(json_items),level=xbmc.LOGNOTICE)
+    xbmc.log("--20" + str(dummy_json),level=xbmc.LOGNOTICE)
     for item in json_items:
         # update the show url by searchin in daymovie
         if item["daymovie_show_url"] is None:
@@ -133,11 +139,34 @@ def get_from_tvtime(s):
                     
             
         # update current and remaining episode based on crawled data from tvtime
-        if item["tvtime_show_id"] in [item["tvtime_show_id"] for item in dummy_json]:
+        xbmc.log("--30" + str(item),level=xbmc.LOGNOTICE)
+        if item["tvtime_show_id"] in [d_item["tvtime_show_id"] for d_item in dummy_json]:
+            xbmc.log("--1" + str(item),level=xbmc.LOGNOTICE)
             for dummy_item in dummy_json:
+                xbmc.log("--2" + str(dummy_item),level=xbmc.LOGNOTICE)
                 if item["tvtime_show_id"] == dummy_item["tvtime_show_id"]:
+                    xbmc.log("--3" + str(dummy_item),level=xbmc.LOGNOTICE)
                     item.update(("episode_to_watch", dummy_item["episode_to_watch"]) for key, value in item.items() if value == item["tvtime_show_id"])
                     item.update(("remaining_episodes", dummy_item["remaining_episodes"]) for key, value in item.items() if value == item["tvtime_show_id"])
+
+                    ## TODO: thie is a copy of the "update episode url" code. fix this shit.
+                    season_number = re.search("S(\d{2})E(\d{2})", dummy_item["episode_to_watch"]).group(1)
+                    episode_number = re.search("S(\d{2})E(\d{2})", dummy_item["episode_to_watch"]).group(2)
+                    for daymovie_item in tvshows_daymovie_urls:
+                        if item["tvtime_show_id"] == daymovie_item["tvtime_show_id"]:
+                            season_list = daymovie_item["urls"]["Season "+season_number]
+                            try:
+                                episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if "720" and "x265" in quality_item["quality"]][0]
+                            except:
+                                try:
+                                    episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if "720" and "x264" in quality_item["quality"]][0]
+                                except:
+                                    try:
+                                        episode_url = season_list[0]["episodes"][0][episode_number][0]
+                                    except:
+                                        episode_url = None
+                            item.update(("daymovie_episode_url", episode_url) for key, value in item.items() if value == item["tvtime_show_id"])
+                    ## end of the shit   
                     
         with open(__profile__ + 'tvshows_tvtime_status.json', "w") as json_file:
             json.dump(json_items, json_file)
@@ -256,12 +285,16 @@ def search_new_item(s):
     json_items = get_from_tvtime(s)
     for item in json_items:
         xbmc.log("--listing items from tvtime",level=xbmc.LOGNOTICE)
-        list_item = xbmcgui.ListItem(label=item["title"])
+        list_item = xbmcgui.ListItem(label=item["title"] + " - " + item["episode_to_watch"])
         list_item.setInfo('video', {'title': item["title"],
                                     #'genre': category,
                                     'mediatype': 'video'})
-        is_folder = True
-        url = get_url(action='new_search')
+        list_item.setArt({'thumb': item["image"],
+                          'icon': item["image"],
+                          'fanart': item["image"]})
+        is_folder = False
+        list_item.setProperty('IsPlayable', 'true')
+        url = get_url(action='play', url=item['daymovie_episode_url'])
         xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
 
     xbmcplugin.endOfDirectory(_handle)
@@ -615,7 +648,11 @@ if __name__ == '__main__':
     # Call the router function and pass the plugin call parameters to it.
     # We use string slicing to trim the leading '?' from the plugin call paramstring
     if i == 0:
-        s = login()
+        try:
+            s = login()
+        except:
+            time.sleep(20)
+            s = login()
         i += 1
     router(sys.argv[2][1:], s)
     
