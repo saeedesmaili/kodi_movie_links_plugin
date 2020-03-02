@@ -22,8 +22,7 @@ __profile__ = xbmc.translatePath( __addon__.getAddonInfo('profile')).decode("utf
 try:
     os.makedirs(__profile__)
 except OSError as e:
-    if e.errno != errno.EEXIST:
-        pass
+    pass
 
 # Get the plugin url in plugin:// notation.
 _url = sys.argv[0]
@@ -33,10 +32,9 @@ _handle = int(sys.argv[1])
 # to prevent login in every step (we want the login only on the first step)
 i = 0
 
-
 def get_from_tvtime(s):
     try:
-        with open('tvshows_tvtime_status.json', "r") as json_file:
+        with open(__profile__ + 'tvshows_tvtime_status.json', "r") as json_file:
             json_items = json.load(json_file)
     except Exception as e:
         json_items = []
@@ -44,7 +42,7 @@ def get_from_tvtime(s):
         pass
     
     try:
-        with open('tvshows_daymovie_urls.json', "r") as json_file:
+        with open(__profile__ + 'tvshows_daymovie_urls.json', "r") as json_file:
             tvshows_daymovie_urls = json.load(json_file)
     except Exception as e:
         tvshows_daymovie_urls = []
@@ -91,27 +89,48 @@ def get_from_tvtime(s):
         if tvtime_show_id not in tvtime_show_id_list:
             json_items.append(json_item)
         else:
-            dummy_json.append(json_item)
-            
+            dummy_json.append(json_item)            
             
     # update with searching in daymovie
-    for item in json_items[:1]:
+    for item in json_items:
         # update the show url by searchin in daymovie
         if item["daymovie_show_url"] is None:
             to_search = item["title"].split("(")[0].strip()
             daymovie_show_url = search_results(to_search, s)["TV Shows"][0]["href"]
             item.update(("daymovie_show_url", daymovie_show_url) for key, value in item.items() if value == item["tvtime_show_id"])
-            
+        
         # update tvshows_daymovie_urls archive
         ## TODO: update the shows that may have new episodes
         if item["tvtime_show_id"] not in [daymovie_item["tvtime_show_id"] for daymovie_item in tvshows_daymovie_urls]:
-            xbmc.log(str(item),level=xbmc.LOGNOTICE)
             season_urls = get_season_urls(url=item["daymovie_show_url"], s=s)
             tvshows_daymovie_urls.append({
                 "title": item["title"],
                 "tvtime_show_id": item["tvtime_show_id"],
                 "urls": season_urls
             })
+
+            with open(__profile__ + 'tvshows_daymovie_urls.json', "w") as json_file:
+                json.dump(tvshows_daymovie_urls, json_file)
+            
+        # update episode url
+        if item["daymovie_episode_url"] is None:
+            season_number = re.search("S(\d{2})E(\d{2})", item["episode_to_watch"]).group(1)
+            episode_number = re.search("S(\d{2})E(\d{2})", item["episode_to_watch"]).group(2)
+            for daymovie_item in tvshows_daymovie_urls:
+                if item["tvtime_show_id"] == daymovie_item["tvtime_show_id"]:
+                    season_list = daymovie_item["urls"]["Season "+season_number]
+                    try:
+                        episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if "720" and "x265" in quality_item["quality"]][0]
+                    except:
+                        try:
+                            episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if "720" and "x264" in quality_item["quality"]][0]
+                        except:
+                            try:
+                                episode_url = season_list[0]["episodes"][0][episode_number][0]
+                            except:
+                                episode_url = None
+                    item.update(("daymovie_episode_url", episode_url) for key, value in item.items() if value == item["tvtime_show_id"])        
+                    
             
         # update current and remaining episode based on crawled data from tvtime
         if item["tvtime_show_id"] in [item["tvtime_show_id"] for item in dummy_json]:
@@ -120,13 +139,14 @@ def get_from_tvtime(s):
                     item.update(("episode_to_watch", dummy_item["episode_to_watch"]) for key, value in item.items() if value == item["tvtime_show_id"])
                     item.update(("remaining_episodes", dummy_item["remaining_episodes"]) for key, value in item.items() if value == item["tvtime_show_id"])
                     
-    with open(__profile__ + 'tvshows_tvtime_status.json', "w") as json_file:
-        json.dump(json_items, json_file)
-        
-    with open(__profile__ + 'tvshows_daymovie_urls.json', "w") as json_file:
-        json.dump(tvshows_daymovie_urls, json_file)
+        with open(__profile__ + 'tvshows_tvtime_status.json', "w") as json_file:
+            json.dump(json_items, json_file)
+
+        with open(__profile__ + 'tvshows_daymovie_urls.json', "w") as json_file:
+            json.dump(tvshows_daymovie_urls, json_file)
         
     return json_items
+
 
 
 def get_season_urls(url, s):
@@ -167,14 +187,19 @@ def get_episode_urls(url, season_number, s):
 
     items = soup_tv_episodes.find(class_="searchresults").find_all("li", attrs={"style": "direction: ltr"})
     tv_episodes_list = []
+    tv_episodes_dict = {}
     for item in items:
         episode_url = item.find("a")["href"]
         try:
-            episode_number = re.search("S" + season_number + "E(\d{2})", episode_url).group(1)
+            episode_number = re.search("S" + season_number + "\s*E(\d{2})", episode_url).group(1)
         except:
-            episode_number = "0"
+            try:
+                episode_number = re.search("\.E(\d{2})\.", episode_url).group(1)
+            except:
+                episode_number = "0"
         
-        tv_episodes_list.append({episode_number: episode_url})
+        tv_episodes_dict.update({episode_number: episode_url})
+    tv_episodes_list.append(tv_episodes_dict)
                 
     return tv_episodes_list
 
