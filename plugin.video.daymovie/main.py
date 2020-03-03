@@ -261,11 +261,10 @@ def login():
         'Accept-Encoding': "gzip, deflate",
         'cache-control': "no-cache"
     })
-    response = s.post(url, data=payload, params=querystring)
+    s.post(url, data=payload, params=querystring)
     return s
 
 
-# TODO: display a "new search" option in first screen and open input box, when clicking on this option
 def search_new_item(s):
     xbmc.log("--search_new_item",level=xbmc.LOGNOTICE)
     list_item = xbmcgui.ListItem(label="New Search ...")
