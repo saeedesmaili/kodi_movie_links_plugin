@@ -124,11 +124,11 @@ def get_from_tvtime(s):
                 if item["tvtime_show_id"] == daymovie_item["tvtime_show_id"]:
                     season_list = daymovie_item["urls"]["Season "+season_number]
                     try:
-                        episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if "720" and "x265" in quality_item["quality"]][0]
-                    except:
+                        episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if all(x in quality_item["quality"] for x in ["720", "x265"])][0]
+                    except Exception as e:
                         try:
-                            episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if "720" and "x264" in quality_item["quality"]][0]
-                        except:
+                            episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if all(x in quality_item["quality"] for x in ["720", "x264"])][0]
+                        except Exception as e:
                             try:
                                 episode_url = season_list[0]["episodes"][0][episode_number][0]
                             except:
@@ -150,11 +150,11 @@ def get_from_tvtime(s):
                         if item["tvtime_show_id"] == daymovie_item["tvtime_show_id"]:
                             season_list = daymovie_item["urls"]["Season "+season_number]
                             try:
-                                episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if "720" and "x265" in quality_item["quality"]][0]
-                            except:
+                                episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if all(x in quality_item["quality"] for x in ["720", "x265"])][0]
+                            except Exception as e:
                                 try:
-                                    episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if "720" and "x264" in quality_item["quality"]][0]
-                                except:
+                                    episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if all(x in quality_item["quality"] for x in ["720", "x264"])][0]
+                                except Exception as e:
                                     try:
                                         episode_url = season_list[0]["episodes"][0][episode_number][0]
                                     except:
@@ -262,7 +262,7 @@ def login():
         'cache-control': "no-cache"
     })
     response = s.post(url, data=payload, params=querystring)
-    return response
+    return s
 
 
 # TODO: display a "new search" option in first screen and open input box, when clicking on this option
