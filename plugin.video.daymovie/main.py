@@ -69,6 +69,7 @@ def get_from_tvtime(s):
 
     items = soup.find_all("li", id = re.compile("^episode-item"))
     dummy_json = []
+    order = 1
     for item in items:
         title = item.find("a", class_="nb-reviews-link").text
         episode_to_watch = item.find("div", class_="episode-details").h2.a.text
@@ -80,6 +81,7 @@ def get_from_tvtime(s):
         href = item.find("div", class_="image-crop").a["href"]
         tvtime_show_id = re.search("/en/show/(\d+)", href).group(1)
         json_item = {
+            "order": order,
             "title": title,
             "episode_to_watch": episode_to_watch,
             "remaining_episodes": remaining_episodes,
@@ -90,6 +92,7 @@ def get_from_tvtime(s):
             "daymovie_season_url": None,
             "daymovie_episode_url": None,
         }
+        order += 1
         if tvtime_show_id not in tvtime_show_id_list:
             json_items.append(json_item)
         else:
@@ -117,6 +120,7 @@ def get_from_tvtime(s):
                 json.dump(tvshows_daymovie_urls, json_file)
             
         # update episode url
+        ## do we need this one?! we will see.
         if item["daymovie_episode_url"] is None:
             season_number = re.search("S(\d{2})E(\d{2})", item["episode_to_watch"]).group(1)
             episode_number = re.search("S(\d{2})E(\d{2})", item["episode_to_watch"]).group(2)
@@ -130,7 +134,8 @@ def get_from_tvtime(s):
                             episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if all(x in quality_item["quality"] for x in ["720", "x264"])][0]
                         except Exception as e:
                             try:
-                                episode_url = season_list[0]["episodes"][0][episode_number][0]
+                                # xbmc.log("--00" + str(season_list),level=xbmc.LOGNOTICE)
+                                episode_url = season_list[0]["episodes"][0][episode_number]
                             except:
                                 episode_url = None
                     item.update(("daymovie_episode_url", episode_url) for key, value in item.items() if value == item["tvtime_show_id"])        
@@ -142,13 +147,18 @@ def get_from_tvtime(s):
                 if item["tvtime_show_id"] == dummy_item["tvtime_show_id"]:
                     item.update(("episode_to_watch", dummy_item["episode_to_watch"]) for key, value in item.items() if value == item["tvtime_show_id"])
                     item.update(("remaining_episodes", dummy_item["remaining_episodes"]) for key, value in item.items() if value == item["tvtime_show_id"])
+                    item.update(("order", dummy_item["order"]) for key, value in item.items() if value == item["tvtime_show_id"])
 
                     ## TODO: thie is a copy of the "update episode url" code. fix this shit.
                     season_number = re.search("S(\d{2})E(\d{2})", dummy_item["episode_to_watch"]).group(1)
                     episode_number = re.search("S(\d{2})E(\d{2})", dummy_item["episode_to_watch"]).group(2)
                     for daymovie_item in tvshows_daymovie_urls:
+                        xbmc.log("--1" + str(daymovie_item),level=xbmc.LOGNOTICE)
+                        xbmc.log("--2" + str(item["tvtime_show_id"]),level=xbmc.LOGNOTICE)
+                        xbmc.log("--2" + str(daymovie_item["tvtime_show_id"]),level=xbmc.LOGNOTICE)
                         if item["tvtime_show_id"] == daymovie_item["tvtime_show_id"]:
                             season_list = daymovie_item["urls"]["Season "+season_number]
+                            xbmc.log("--3" + str(season_list),level=xbmc.LOGNOTICE)
                             try:
                                 episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if all(x in quality_item["quality"] for x in ["720", "x265"])][0]
                             except Exception as e:
@@ -156,9 +166,10 @@ def get_from_tvtime(s):
                                     episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if all(x in quality_item["quality"] for x in ["720", "x264"])][0]
                                 except Exception as e:
                                     try:
-                                        episode_url = season_list[0]["episodes"][0][episode_number][0]
+                                        episode_url = season_list[0]["episodes"][0][episode_number]
                                     except:
                                         episode_url = None
+                            xbmc.log("--4" + str(episode_url),level=xbmc.LOGNOTICE)
                             item.update(("daymovie_episode_url", episode_url) for key, value in item.items() if value == item["tvtime_show_id"])
                     ## end of the shit   
                     
@@ -170,6 +181,25 @@ def get_from_tvtime(s):
         
     return json_items
 
+
+# TODO: complete this function and use it instead the above shit
+def update_episode_url():
+    season_number = re.search("S(\d{2})E(\d{2})", dummy_item["episode_to_watch"]).group(1)
+    episode_number = re.search("S(\d{2})E(\d{2})", dummy_item["episode_to_watch"]).group(2)
+    for daymovie_item in tvshows_daymovie_urls:
+        if item["tvtime_show_id"] == daymovie_item["tvtime_show_id"]:
+            season_list = daymovie_item["urls"]["Season "+season_number]
+            try:
+                episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if all(x in quality_item["quality"] for x in ["720", "x265"])][0]
+            except Exception as e:
+                try:
+                    episode_url = [quality_item["episodes"][0][episode_number] for quality_item in season_list if all(x in quality_item["quality"] for x in ["720", "x264"])][0]
+                except Exception as e:
+                    try:
+                        episode_url = season_list[0]["episodes"][0][episode_number]
+                    except:
+                        episode_url = None
+            item.update(("daymovie_episode_url", episode_url) for key, value in item.items() if value == item["tvtime_show_id"])
 
 
 def get_season_urls(url, s):
@@ -278,7 +308,10 @@ def search_new_item(s):
     json_items = get_from_tvtime(s)
     for item in json_items:
         xbmc.log("--listing items from tvtime",level=xbmc.LOGNOTICE)
-        list_item = xbmcgui.ListItem(label=item["title"] + " - " + item["episode_to_watch"])
+        label = item["title"] + " - " + item["episode_to_watch"]
+        if item['daymovie_episode_url'] is None:
+            label += " - (file not found)"
+        list_item = xbmcgui.ListItem(label=label)
         list_item.setInfo('video', {'title': item["title"],
                                     #'genre': category,
                                     'mediatype': 'video'})
@@ -328,7 +361,6 @@ def search_results(keyword, s):
         elif "movie" in href:
             items_dict["Movies"].append(this_item)
 
-    xbmc.log(str(items_dict),level=xbmc.LOGNOTICE)
 
     return items_dict
 
