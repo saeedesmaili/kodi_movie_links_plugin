@@ -1,7 +1,93 @@
+# -*- coding: utf-8 -*-
+
+import config
+import requests
+from bs4 import BeautifulSoup
+import re
+import json
 
 
+def hello():
+    return "hello world!"
 
-def get_from_tvtime(s):
+
+hello()
+
+
+def get_from_tvtime(profile):
+    try:
+        with open(profile + 'tvshows_tvtime_status.json', "r") as json_file:
+            json_items = json.load(json_file)
+    except Exception as e:
+        json_items = []
+        print(e)
+        pass
+    
+    tvtime_show_id_list = [item["tvtime_show_id"] for item in json_items]
+    url = "https://www.tvtime.com/en/to-watch"
+
+    payload = {}
+    headers = {
+    'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Connection': 'keep-alive',
+    'Cookie': config.TVTIME_COOKIE,
+    'Upgrade-Insecure-Requests': '1',
+    'TE': 'Trailers'
+    }
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    items = soup.find_all("li", id = re.compile("^episode-item"))
+    dummy_json = []
+    order = 1
+    for item in items:
+        title = item.find("a", class_="nb-reviews-link").text
+        episode_to_watch = item.find("div", class_="episode-details").h2.a.text
+        try:
+            remaining_episodes = item.find("div", class_="episode-details").h2.span.text
+        except:
+            remaining_episodes = None
+        image = item.find("img")["src"]
+        href = item.find("div", class_="image-crop").a["href"]
+        tvtime_show_id = re.search("/en/show/(\d+)", href).group(1)
+        json_item = {
+            "order": order,
+            "title": title,
+            "episode_to_watch": episode_to_watch,
+            "remaining_episodes": remaining_episodes,
+            "image": image,
+            "tvtime_show_id": tvtime_show_id,
+            "daymovie_id": None,
+            "daymovie_show_url": None,
+            "daymovie_season_url": None,
+            "daymovie_episode_url": None,
+        }
+        order += 1
+        if tvtime_show_id not in tvtime_show_id_list:
+            json_items.append(json_item)
+        else:
+            dummy_json.append(json_item)            
+            
+    # update with searching in daymovie
+    for item in json_items:
+        # update current and remaining episode based on crawled data from tvtime
+        if item["tvtime_show_id"] in [d_item["tvtime_show_id"] for d_item in dummy_json]:
+            for dummy_item in dummy_json:
+                if item["tvtime_show_id"] == dummy_item["tvtime_show_id"]:
+                    item.update(("episode_to_watch", dummy_item["episode_to_watch"]) for key, value in item.items() if value == item["tvtime_show_id"])
+                    item.update(("remaining_episodes", dummy_item["remaining_episodes"]) for key, value in item.items() if value == item["tvtime_show_id"])
+                    item.update(("order", dummy_item["order"]) for key, value in item.items() if value == item["tvtime_show_id"])
+
+        with open(profile + 'tvshows_tvtime_status.json', "w") as json_file:
+            json.dump(json_items, json_file)
+
+    return json_items
+
+
+def get_from_tvtime_old():
     try:
         with open(__profile__ + 'tvshows_tvtime_status.json', "r") as json_file:
             json_items = json.load(json_file)
