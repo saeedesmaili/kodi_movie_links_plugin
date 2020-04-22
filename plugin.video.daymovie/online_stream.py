@@ -49,7 +49,7 @@ def get_from_tvtime(profile):
         try:
             remaining_episodes = item.find("div", class_="episode-details").h2.span.text
         except:
-            remaining_episodes = None
+            remaining_episodes = "The last one so far."
         image = item.find("img")["src"]
         href = item.find("div", class_="image-crop").a["href"]
         tvtime_show_id = re.search("/en/show/(\d+)", href).group(1)
@@ -81,8 +81,11 @@ def get_from_tvtime(profile):
                     item.update(("remaining_episodes", dummy_item["remaining_episodes"]) for key, value in item.items() if value == item["tvtime_show_id"])
                     item.update(("order", dummy_item["order"]) for key, value in item.items() if value == item["tvtime_show_id"])
 
-        with open(profile + 'tvshows_tvtime_status.json', "w") as json_file:
-            json.dump(json_items, json_file)
+    json_items = sorted(json_items, key = lambda x: x['order']) 
+    with open(profile + 'tvshows_tvtime_status.json', "w") as json_file:
+        json.dump(json_items, json_file)
+
+    
 
     return json_items
 

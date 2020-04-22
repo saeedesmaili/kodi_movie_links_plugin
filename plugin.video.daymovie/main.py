@@ -60,8 +60,8 @@ def home_tv_series(count=5):
     tv_series_dirs, _ = listdir(smb_home + "tvseries")
     xbmc.log(str(tv_series_dirs),level=xbmc.LOGNOTICE)
 
-
-    for item in tv_series[:count]:
+    # to consider the "count", use: tv_series[:count]
+    for item in tv_series:
         xbmc.log(str(item),level=xbmc.LOGNOTICE)
 
         # create this tvseries' directory, if it doesn't exist
@@ -81,25 +81,34 @@ def home_tv_series(count=5):
 
         _, files = listdir(season_dir)
         try:
-            xbmc.log(str(season_dir),level=xbmc.LOGNOTICE)
-            xbmc.log(str(episode_to_watch),level=xbmc.LOGNOTICE)
-            xbmc.log(str(files),level=xbmc.LOGNOTICE)
             file_name = [file_name for file_name in files if episode_to_watch.lower() in file_name.lower()][0]
             file_path = "smb://" + config.SMBNAME + "/public/tvseries/" + item["title"] + "/" + season_to_watch + "/" + file_name
         except Exception as e:
-            xbmc.log(str(e),level=xbmc.LOGNOTICE)
-            file_path = ""
+            print(e)
+            # file_path = ""
+            continue
+
         xbmc.log(str(file_path),level=xbmc.LOGNOTICE)
 
         is_folder = False
         list_item = xbmcgui.ListItem(label=item["title"] + " - " + item["episode_to_watch"])
+        list_item.setArt({'thumb': item["image"],
+                          'icon': item["image"],
+                          'fanart': item["image"]})
+        list_item.setInfo('video', {'title': item["title"],
+                                    'genre': item["remaining_episodes"],
+                                    'mediatype': 'movie',
+                                    'plot': item["remaining_episodes"],
+                                    })
         url = get_url(action='play_local', file_path=file_path)
         xbmc.log(str(url),level=xbmc.LOGNOTICE)
         xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
+
+    # "show all" option
+    # is_folder = True
+    xbmcplugin.setContent(int(sys.argv[1]), 'Movies')
+
     xbmcplugin.endOfDirectory(_handle)
-
-    xbmc.log(str(tv_series),level=xbmc.LOGNOTICE)
-
 
 
 def user_input():
