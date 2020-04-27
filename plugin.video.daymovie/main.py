@@ -41,7 +41,7 @@ def home():
 
     home_tv_series()
 
-    local_files = listdir(smb_home)
+    # local_files = listdir(smb_home)
 
 
 def home_tv_series(count=5):
@@ -104,8 +104,16 @@ def home_tv_series(count=5):
         xbmc.log(str(url),level=xbmc.LOGNOTICE)
         xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
 
-    # "show all" option
-    # is_folder = True
+    ## refresh option
+    is_folder = False
+    list_item = xbmcgui.ListItem(label="Refresh ...")
+    list_item.setInfo('video', {'plot': "Refresh the current list based on updated data on the Tvtime",
+                                })
+    url = get_url(action='refresh_list')
+    xbmc.log(str(url),level=xbmc.LOGNOTICE)
+    xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
+
+
     xbmcplugin.setContent(int(sys.argv[1]), 'Movies')
 
     xbmcplugin.endOfDirectory(_handle)
@@ -184,6 +192,9 @@ def router(paramstring):
         elif params['action'] == 'play_local':
             # Play a video from a provided URL.
             play_local_video(params['file_path'])
+        elif params['action'] == 'refresh_list':
+            # Play a video from a provided URL.
+            xbmc.executebuiltin('Container.Refresh')
         elif params['action'] == 'new_search':
             # Play a video from a provided URL.
             list_categories(s)

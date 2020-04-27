@@ -15,13 +15,15 @@ hello()
 
 
 def get_from_tvtime(profile):
-    try:
-        with open(profile + 'tvshows_tvtime_status.json', "r") as json_file:
-            json_items = json.load(json_file)
-    except Exception as e:
-        json_items = []
-        print(e)
-        pass
+    # try:
+    #     with open(profile + 'tvshows_tvtime_status.json', "r") as json_file:
+    #         json_items = json.load(json_file)
+    # except Exception as e:
+    #     json_items = []
+    #     print(e)
+    #     pass
+
+    json_items = []
     
     tvtime_show_id_list = [item["tvtime_show_id"] for item in json_items]
     url = "https://www.tvtime.com/en/to-watch"
