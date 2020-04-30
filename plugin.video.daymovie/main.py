@@ -104,6 +104,15 @@ def home_tv_series(count=5):
         xbmc.log(str(url),level=xbmc.LOGNOTICE)
         xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
 
+    ## get not-started-yet data from tvtime too
+    is_folder = False
+    list_item = xbmcgui.ListItem(label="Get all not-started-yet ...")
+    list_item.setInfo('video', {'plot': "Get all not-started-yet tv-series data from Tvtime",
+                                })
+    url = get_url(action='get_all_tvtime')
+    xbmc.log(str(url),level=xbmc.LOGNOTICE)
+    xbmcplugin.addDirectoryItem(_handle, url, list_item, is_folder)
+
     ## refresh option
     is_folder = False
     list_item = xbmcgui.ListItem(label="Refresh ...")
@@ -187,16 +196,15 @@ def router(paramstring):
         elif params['action'] == 'episode_listing':
             list_episodes(params['url'], params['quality'], params['season_number'], s)
         elif params['action'] == 'play':
-            # Play a video from a provided URL.
             play_online_video(params['url'])
         elif params['action'] == 'play_local':
-            # Play a video from a provided URL.
             play_local_video(params['file_path'])
         elif params['action'] == 'refresh_list':
-            # Play a video from a provided URL.
+            xbmc.executebuiltin('Container.Refresh')
+        elif params['action'] == 'get_all_tvtime':
+            get_from_tvtime(profile = __profile__, get_all = True)
             xbmc.executebuiltin('Container.Refresh')
         elif params['action'] == 'new_search':
-            # Play a video from a provided URL.
             list_categories(s)
         else:
             # If the provided paramstring does not contain a supported action

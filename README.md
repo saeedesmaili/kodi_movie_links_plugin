@@ -1,7 +1,8 @@
 # kodi_movie_links_plugin
 
 ## TODO:
-- [ ] add refresh option on home page to refresh tvtime status
+- [ ] make the "get all not-started-yet" button to work properly
+- [x] add refresh option on home page to refresh tvtime status
 - [ ] select online stream quality dynamically
 - [ ] login only once on daymovie (or whenever is needed)
 - [ ] Add imdb's watchlist

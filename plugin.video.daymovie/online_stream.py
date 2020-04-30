@@ -5,6 +5,8 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
+import xbmc
+
 
 
 def hello():
@@ -14,7 +16,7 @@ def hello():
 hello()
 
 
-def get_from_tvtime(profile):
+def get_from_tvtime(profile, get_all=False):
     # try:
     #     with open(profile + 'tvshows_tvtime_status.json', "r") as json_file:
     #         json_items = json.load(json_file)
@@ -26,7 +28,7 @@ def get_from_tvtime(profile):
     json_items = []
     
     tvtime_show_id_list = [item["tvtime_show_id"] for item in json_items]
-    url = "https://www.tvtime.com/en/to-watch"
+    url1 = "https://www.tvtime.com/en/to-watch"
 
     payload = {}
     headers = {
@@ -39,10 +41,17 @@ def get_from_tvtime(profile):
     'TE': 'Trailers'
     }
 
-    response = requests.request("GET", url, headers=headers, data=payload)
-    soup = BeautifulSoup(response.text, 'html.parser')
+    response_text = requests.request("GET", url1, headers=headers, data=payload).text
+    if get_all:
+        xbmc.log("--get_all",level=xbmc.LOGNOTICE)
+        url2 = "https://www.tvtime.com/en/not-started-yet"
+        response2 = requests.request("GET", url2, headers=headers, data=payload)
+        response_text += response2.text
+
+    soup = BeautifulSoup(response_text, 'html.parser')
 
     items = soup.find_all("li", id = re.compile("^episode-item"))
+    xbmc.log(str(items),level=xbmc.LOGNOTICE)
     dummy_json = []
     order = 1
     for item in items:
@@ -73,7 +82,6 @@ def get_from_tvtime(profile):
         else:
             dummy_json.append(json_item)            
             
-    # update with searching in daymovie
     for item in json_items:
         # update current and remaining episode based on crawled data from tvtime
         if item["tvtime_show_id"] in [d_item["tvtime_show_id"] for d_item in dummy_json]:
